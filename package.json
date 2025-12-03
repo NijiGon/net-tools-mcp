@@ -1,0 +1,45 @@
+{
+  "name": "net-tools-mcp",
+  "version": "1.0.0",
+  "description": "MCP server providing network diagnostic tools (ping, nslookup, traceroute, curl, ssh, etc.)",
+  "type": "module",
+  "main": "./build/index.js",
+  "bin": {
+    "net-tools-mcp": "./build/index.js"
+  },
+  "files": [
+    "build",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node build/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "network",
+    "tools",
+    "ping",
+    "nslookup",
+    "traceroute",
+    "ssh",
+    "diagnostics"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/net-tools-mcp"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
