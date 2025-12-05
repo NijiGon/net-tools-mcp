@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
+const app = express();
+app.use(express.json());
 
 const sanitizeInput = (input: string): string => {
   return input.replace(/[;&|`$(){}\[\]<>\n\r]/g, "");
@@ -35,140 +35,7 @@ const validatePath = (path: string): boolean => {
   return pathRegex.test(path);
 };
 
-const server = new Server(
-  { name: "net-tools-mcp", version: "1.0.0" },
-  { capabilities: { tools: {} } }
-);
-
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: "ping",
-      description: "Ping a host to check connectivity",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: { type: "string", description: "Hostname or IP address" },
-          count: { type: "number", description: "Number of packets (default: 4)" },
-          timeout: { type: "number", description: "Timeout in seconds" },
-          packetSize: { type: "number", description: "Packet size in bytes" },
-          ttl: { type: "number", description: "Time to live" }
-        },
-        required: ["host"]
-      }
-    },
-    {
-      name: "nslookup",
-      description: "DNS lookup for a hostname",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: { type: "string", description: "Hostname to lookup" },
-          server: { type: "string", description: "DNS server to query" },
-          type: { type: "string", description: "Query type (A, AAAA, MX, NS, etc.)" }
-        },
-        required: ["host"]
-      }
-    },
-    {
-      name: "netstat",
-      description: "Display network connections and statistics",
-      inputSchema: {
-        type: "object",
-        properties: {
-          options: { type: "string", description: "Options (e.g., '-an', '-r')" }
-        }
-      }
-    },
-    {
-      name: "telnet",
-      description: "Test TCP connection to host:port",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: { type: "string", description: "Hostname or IP" },
-          port: { type: "number", description: "Port number" },
-          timeout: { type: "number", description: "Connection timeout in seconds (default: 5)" }
-        },
-        required: ["host", "port"]
-      }
-    },
-    {
-      name: "ssh",
-      description: "Execute SSH command",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: { type: "string", description: "SSH host" },
-          command: { type: "string", description: "Command to execute" },
-          user: { type: "string", description: "Username" },
-          port: { type: "number", description: "SSH port (default: 22)" },
-          identityFile: { type: "string", description: "Path to private key file" },
-          timeout: { type: "number", description: "Connection timeout in seconds" }
-        },
-        required: ["host", "command"]
-      }
-    },
-    {
-      name: "traceroute",
-      description: "Trace route to host",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: { type: "string", description: "Hostname or IP address" },
-          maxHops: { type: "number", description: "Maximum hops (default: 30)" },
-          timeout: { type: "number", description: "Timeout per hop in seconds" }
-        },
-        required: ["host"]
-      }
-    },
-    {
-      name: "curl",
-      description: "HTTP request to URL",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to request" },
-          method: { type: "string", description: "HTTP method (GET, POST, etc.)" },
-          headers: { type: "string", description: "Headers as JSON string" },
-          data: { type: "string", description: "Request body" },
-          timeout: { type: "number", description: "Timeout in seconds" },
-          followRedirects: { type: "boolean", description: "Follow redirects (default: true)" }
-        },
-        required: ["url"]
-      }
-    },
-    {
-      name: "wget",
-      description: "Download file from URL",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL to download" },
-          output: { type: "string", description: "Output file path" },
-          timeout: { type: "number", description: "Timeout in seconds" },
-          tries: { type: "number", description: "Number of retries" }
-        },
-        required: ["url"]
-      }
-    },
-    {
-      name: "whois",
-      description: "WHOIS lookup for domain",
-      inputSchema: {
-        type: "object",
-        properties: {
-          domain: { type: "string", description: "Domain name or IP" }
-        },
-        required: ["domain"]
-      }
-    }
-  ]
-}));
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  const params = args as Record<string, any>;
+const executeTool = async (name: string, params: Record<string, any>) => {
 
   try {
     let cmd = "";
@@ -295,16 +162,265 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     const { stdout, stderr } = await execAsync(cmd);
-    return {
-      content: [{ type: "text", text: stdout || stderr }]
-    };
+    return { result: stdout || stderr };
   } catch (error: any) {
-    return {
-      content: [{ type: "text", text: `Error: ${error.message}\n${error.stderr || ""}` }],
-      isError: true
-    };
+    throw new Error(`${error.message}\n${error.stderr || ""}`);
   }
+};
+
+app.get("/openapi.json", (req, res) => {
+  res.json({
+    openapi: "3.0.0",
+    info: {
+      title: "Net Tools API",
+      version: "1.0.0",
+      description: "HTTP-based network diagnostic tools API"
+    },
+    servers: [{ url: "http://localhost:3000" }],
+    paths: {
+      "/ping": {
+        post: {
+          summary: "Ping a host",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["host"],
+                  properties: {
+                    host: { type: "string", description: "Hostname or IP address" },
+                    count: { type: "number", description: "Number of packets" },
+                    timeout: { type: "number", description: "Timeout in seconds" },
+                    packetSize: { type: "number", description: "Packet size in bytes" },
+                    ttl: { type: "number", description: "Time to live" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/nslookup": {
+        post: {
+          summary: "DNS lookup",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["host"],
+                  properties: {
+                    host: { type: "string", description: "Hostname to lookup" },
+                    server: { type: "string", description: "DNS server" },
+                    type: { type: "string", description: "Query type (A, AAAA, MX, etc.)" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/netstat": {
+        post: {
+          summary: "Network statistics",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    options: { type: "string", description: "Options (e.g., '-an')" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/telnet": {
+        post: {
+          summary: "Test TCP port",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["host", "port"],
+                  properties: {
+                    host: { type: "string", description: "Hostname or IP" },
+                    port: { type: "number", description: "Port number" },
+                    timeout: { type: "number", description: "Timeout in seconds" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/ssh": {
+        post: {
+          summary: "Execute SSH command",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["host", "command"],
+                  properties: {
+                    host: { type: "string", description: "SSH host" },
+                    command: { type: "string", description: "Command to execute" },
+                    user: { type: "string", description: "Username" },
+                    port: { type: "number", description: "SSH port" },
+                    identityFile: { type: "string", description: "Private key path" },
+                    timeout: { type: "number", description: "Timeout in seconds" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/traceroute": {
+        post: {
+          summary: "Trace route to host",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["host"],
+                  properties: {
+                    host: { type: "string", description: "Hostname or IP" },
+                    maxHops: { type: "number", description: "Maximum hops" },
+                    timeout: { type: "number", description: "Timeout per hop" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/curl": {
+        post: {
+          summary: "HTTP request",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["url"],
+                  properties: {
+                    url: { type: "string", description: "URL to request" },
+                    method: { type: "string", description: "HTTP method" },
+                    headers: { type: "string", description: "Headers as JSON string" },
+                    data: { type: "string", description: "Request body" },
+                    timeout: { type: "number", description: "Timeout in seconds" },
+                    followRedirects: { type: "boolean", description: "Follow redirects" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/wget": {
+        post: {
+          summary: "Download file",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["url"],
+                  properties: {
+                    url: { type: "string", description: "URL to download" },
+                    output: { type: "string", description: "Output file path" },
+                    timeout: { type: "number", description: "Timeout in seconds" },
+                    tries: { type: "number", description: "Number of retries" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      },
+      "/whois": {
+        post: {
+          summary: "WHOIS lookup",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["domain"],
+                  properties: {
+                    domain: { type: "string", description: "Domain name or IP" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Success", content: { "application/json": { schema: { type: "object", properties: { result: { type: "string" } } } } } },
+            "500": { description: "Error", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } }
+          }
+        }
+      }
+    }
+  });
 });
 
-const transport = new StdioServerTransport();
-server.connect(transport).catch(console.error);
+const tools = ["ping", "nslookup", "netstat", "telnet", "ssh", "traceroute", "curl", "wget", "whois"];
+tools.forEach(tool => {
+  app.post(`/${tool}`, async (req, res) => {
+    try {
+      const result = await executeTool(tool, req.body);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
