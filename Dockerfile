@@ -1,24 +1,23 @@
 FROM node:18-alpine
 
+# Install network tools
 RUN apk add --no-cache \
     iputils \
     bind-tools \
     net-tools \
     curl \
     wget \
-    whois \
+    openssh-client \
     traceroute \
-    openssh-client
+    whois
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
+COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "build/index.js"]
+CMD ["npm", "run", "dev"]

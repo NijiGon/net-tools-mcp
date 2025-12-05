@@ -1,47 +1,24 @@
 {
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@types/express": "^5.0.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "zod": "^3.24.1"
+  },
   "name": "net-tools-mcp",
   "version": "1.0.0",
-  "description": "MCP server providing network diagnostic tools (ping, nslookup, traceroute, curl, ssh, etc.)",
   "type": "module",
-  "main": "./build/index.js",
-  "bin": {
-    "net-tools-mcp": "./build/index.js"
-  },
-  "files": [
-    "build",
-    "README.md"
-  ],
+  "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "start": "node build/index.js",
-    "dev": "tsc && node build/index.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx tsx ./src/server.ts"
   },
-  "keywords": [
-    "mcp",
-    "network",
-    "tools",
-    "ping",
-    "nslookup",
-    "traceroute",
-    "ssh",
-    "diagnostics"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/net-tools-mcp"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }

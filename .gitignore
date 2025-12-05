@@ -10,9 +10,8 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
-.env.development
-.env.test
-.env.production
+
+.kilocode
 
 # Build output
 dist/
@@ -25,7 +24,10 @@ out/
 .vscode/
 *.swp
 *.swo
+
+# OS
 .DS_Store
+Thumbs.db
 
 # Testing
 coverage/
@@ -35,14 +37,11 @@ coverage/
 logs/
 *.log
 
-# Misc
+# Cache
 .cache/
-.temp/
-.tmp/
-*.bak
-*.tmp
-*~
+.eslintcache
+.stylelintcache
 
-# System Files
-.DS_Store
-Thumbs.db
+# Misc
+.tmp/
+temp/
