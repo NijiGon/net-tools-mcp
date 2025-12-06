@@ -6,6 +6,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 import { promisify } from "util";
 import { exec } from "child_process";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 // Create MCP server
 const server = new McpServer(
@@ -25,11 +26,35 @@ server.registerTool(
   {
     description: "Ping a host to check connectivity",
     inputSchema: z.object({
-      host: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Target hostname or IP address"),
-      count: z.number().int().min(1).max(100).optional().describe("Number of ping packets to send (1-100, default: 4)"),
-      timeout: z.number().min(1).max(60).optional().describe("Timeout in seconds (1-60)"),
-      packetSize: z.number().min(1).max(65500).optional().describe("Packet size in bytes (1-65500)"),
-      ttl: z.number().min(1).max(255).optional().describe("Time to live (1-255)"),
+      host: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Target hostname or IP address"),
+      count: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Number of ping packets to send (1-100, default: 4)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(60)
+        .optional()
+        .describe("Timeout in seconds (1-60)"),
+      packetSize: z
+        .number()
+        .min(1)
+        .max(65500)
+        .optional()
+        .describe("Packet size in bytes (1-65500)"),
+      ttl: z
+        .number()
+        .min(1)
+        .max(255)
+        .optional()
+        .describe("Time to live (1-255)"),
     }),
   },
   async ({
@@ -64,7 +89,10 @@ server.registerTool(
   {
     description: "DNS lookup for a hostname",
     inputSchema: z.object({
-      host: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Hostname or IP address to lookup"),
+      host: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Hostname or IP address to lookup"),
       server: z
         .string()
         .regex(/^[a-zA-Z0-9.-]+$/)
@@ -102,7 +130,9 @@ server.registerTool(
       options: z
         .enum(["-a", "-n", "-r", "-s", "-an", "-rn", "-ano", "-e", ""])
         .optional()
-        .describe("Netstat options: -a (all), -n (numeric), -r (routing), -s (statistics), -e (ethernet)"),
+        .describe(
+          "Netstat options: -a (all), -n (numeric), -r (routing), -s (statistics), -e (ethernet)"
+        ),
     }),
   },
   async ({ options = "" }: { options?: string | undefined }) => {
@@ -117,9 +147,22 @@ server.registerTool(
   {
     description: "Test TCP connection to host:port",
     inputSchema: z.object({
-      host: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Target hostname or IP address"),
-      port: z.number().int().min(1).max(65535).describe("Target port number (1-65535)"),
-      timeout: z.number().min(1).max(60).optional().describe("Connection timeout in seconds (1-60, default: 5)"),
+      host: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Target hostname or IP address"),
+      port: z
+        .number()
+        .int()
+        .min(1)
+        .max(65535)
+        .describe("Target port number (1-65535)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(60)
+        .optional()
+        .describe("Connection timeout in seconds (1-60, default: 5)"),
     }),
   },
   async ({
@@ -146,20 +189,34 @@ server.registerTool(
   {
     description: "Execute SSH command",
     inputSchema: z.object({
-      host: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Target hostname or IP address"),
+      host: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Target hostname or IP address"),
       command: z.string().describe("Command to execute on remote host"),
       user: z
         .string()
         .regex(/^[a-zA-Z0-9_-]+$/)
         .optional()
         .describe("SSH username"),
-      port: z.number().int().min(1).max(65535).optional().describe("SSH port (default: 22)"),
+      port: z
+        .number()
+        .int()
+        .min(1)
+        .max(65535)
+        .optional()
+        .describe("SSH port (default: 22)"),
       identityFile: z
         .string()
         .regex(/^[a-zA-Z0-9._\/-]+$/)
         .optional()
         .describe("Path to SSH private key file"),
-      timeout: z.number().min(1).max(60).optional().describe("Connection timeout in seconds (1-60)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(60)
+        .optional()
+        .describe("Connection timeout in seconds (1-60)"),
     }),
   },
   async ({
@@ -196,9 +253,23 @@ server.registerTool(
   {
     description: "Trace route to host",
     inputSchema: z.object({
-      host: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Target hostname or IP address"),
-      maxHops: z.number().int().min(1).max(64).optional().describe("Maximum number of hops (1-64, default: 30)"),
-      timeout: z.number().min(1).max(60).optional().describe("Timeout per hop in seconds (1-60, default: 5)"),
+      host: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Target hostname or IP address"),
+      maxHops: z
+        .number()
+        .int()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe("Maximum number of hops (1-64, default: 30)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(60)
+        .optional()
+        .describe("Timeout per hop in seconds (1-60, default: 5)"),
     }),
   },
   async ({
@@ -232,8 +303,16 @@ server.registerTool(
         .describe("HTTP method (default: GET)"),
       headers: z.string().optional().describe("JSON string of headers"),
       data: z.string().optional().describe("Request body data"),
-      timeout: z.number().min(1).max(300).optional().describe("Request timeout in seconds (1-300)"),
-      followRedirects: z.boolean().optional().describe("Follow redirects (default: true)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(300)
+        .optional()
+        .describe("Request timeout in seconds (1-300)"),
+      followRedirects: z
+        .boolean()
+        .optional()
+        .describe("Follow redirects (default: true)"),
     }),
   },
   async ({
@@ -276,8 +355,18 @@ server.registerTool(
         .regex(/^[a-zA-Z0-9._\/-]+$/)
         .optional()
         .describe("Output filename"),
-      timeout: z.number().min(1).max(300).optional().describe("Download timeout in seconds (1-300)"),
-      tries: z.number().min(1).max(10).optional().describe("Number of retry attempts (1-10)"),
+      timeout: z
+        .number()
+        .min(1)
+        .max(300)
+        .optional()
+        .describe("Download timeout in seconds (1-300)"),
+      tries: z
+        .number()
+        .min(1)
+        .max(10)
+        .optional()
+        .describe("Number of retry attempts (1-10)"),
     }),
   },
   async ({
@@ -311,7 +400,10 @@ server.registerTool(
   {
     description: "WHOIS lookup for domain",
     inputSchema: z.object({
-      domain: z.string().regex(/^[a-zA-Z0-9.-]+$/).describe("Domain name to lookup"),
+      domain: z
+        .string()
+        .regex(/^[a-zA-Z0-9.-]+$/)
+        .describe("Domain name to lookup"),
     }),
   },
   async ({ domain }: { domain: string }) => {
@@ -325,7 +417,11 @@ const app = express();
 app.use(express.json());
 
 // API Key middleware
-const apiKeyAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const apiKeyAuth = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
   const apiKey = req.headers["x-api-key"] || req.query.apiKey;
   if (!process.env.API_KEY || apiKey === process.env.API_KEY) {
     next();
@@ -337,15 +433,24 @@ const apiKeyAuth = (req: express.Request, res: express.Response, next: express.N
 let transport: SSEServerTransport | null = null;
 
 // Route for SSE MCP
-app.get("/mcp", apiKeyAuth, async (req, res) => {
-  transport = new SSEServerTransport("/messages", res);
+app.get("/mcp/sse", apiKeyAuth, async (req, res) => {
+  transport = new SSEServerTransport("/mcp/sse/messages", res);
   await server.connect(transport);
 });
 
-app.post("/messages", apiKeyAuth, async (req, res) => {
+app.post("/mcp/sse/messages", apiKeyAuth, async (req, res) => {
   if (transport) {
     await transport.handlePostMessage(req, res, req.body);
   }
+});
+
+const httpTransport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
+});
+await server.connect(httpTransport);
+
+app.post("/mcp/http", apiKeyAuth, (req, res) => {
+  httpTransport.handleRequest(req, res, req.body);
 });
 
 // Optional: health check
